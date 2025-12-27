@@ -26,7 +26,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
     if (user?.role === 'admin') {
       return [
         ...baseItems,
-        { id: 'users', label: 'User Management', icon: Users },
+        { id: 'users', label: 'Users', icon: Users },
         { id: 'projects', label: 'Projects', icon: FolderKanban },
       ];
     }
@@ -34,7 +34,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
     if (user?.role === 'client') {
       return [
         ...baseItems,
-        { id: 'projects', label: 'My Projects', icon: FolderKanban },
+        { id: 'projects', label: 'Projects', icon: FolderKanban },
       ];
     }
 
@@ -44,7 +44,7 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
   const navigationItems = getNavigationItems();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Top Navigation */}
       <nav className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -52,31 +52,37 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
             <div className="flex items-center">
               <h1 className="text-xl font-bold text-gray-900">WorkFlow Pro</h1>
             </div>
+
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
                 <Avatar>
                   <AvatarFallback>
-                    {user?.name.split(' ').map(n => n[0]).join('')}
+                    {user?.name?.split(' ').map(n => n[0]).join('')}
                   </AvatarFallback>
                 </Avatar>
+
+                {/* Hide user info on mobile */}
                 <div className="hidden md:block">
                   <p className="text-sm font-medium text-gray-900">{user?.name}</p>
                   <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
                 </div>
               </div>
+
               <Button variant="ghost" size="sm" onClick={logout}>
                 <LogOut className="w-4 h-4 mr-2" />
-                Logout
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           </div>
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Content Area */}
+      <div className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6">
         <div className="flex gap-6">
-          {/* Sidebar */}
-          <aside className="w-64 flex-shrink-0">
+          
+          {/* Desktop Sidebar */}
+          <aside className="hidden md:block w-64 flex-shrink-0">
             <nav className="space-y-1">
               {navigationItems.map((item) => {
                 const Icon = item.icon;
@@ -103,6 +109,29 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onPageChange }) 
             {children}
           </main>
         </div>
+      </div>
+
+      {/* Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t z-50">
+        <nav className="flex justify-around">
+          {navigationItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => onPageChange(item.id)}
+                className={`flex flex-col items-center py-2 text-xs ${
+                  currentPage === item.id
+                    ? 'text-blue-600'
+                    : 'text-gray-500'
+                }`}
+              >
+                <Icon className="w-5 h-5 mb-1" />
+                {item.label}
+              </button>
+            );
+          })}
+        </nav>
       </div>
     </div>
   );

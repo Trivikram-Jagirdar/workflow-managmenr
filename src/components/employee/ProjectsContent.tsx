@@ -27,11 +27,10 @@ const ProjectsContent: React.FC = () => {
     try {
       const allProjects: Project[] = await projectService.getAll();
       setProjects(allProjects);
-      
+
       const tasksForMe: TaskWithProject[] = [];
       allProjects.forEach((project) => {
-        const projectTasks = project.tasks || [];
-        projectTasks.forEach((task) => {
+        project.tasks?.forEach((task) => {
           if (task.assignedTo === user?.id) {
             tasksForMe.push({ project, task });
           }
@@ -52,16 +51,16 @@ const ProjectsContent: React.FC = () => {
         if (task.id === taskId) {
           return {
             ...task,
-            subtasks: task.subtasks.map((subtask) => {
-              if (subtask.id === subtaskId) {
-                return {
-                  ...subtask,
-                  status: subtask.status === 'completed' ? 'pending' : 'completed',
-                  completedAt: subtask.status === 'completed' ? undefined : new Date().toISOString()
-                };
-              }
-              return subtask;
-            })
+            subtasks: task.subtasks.map((subtask) =>
+              subtask.id === subtaskId
+                ? {
+                    ...subtask,
+                    status: subtask.status === 'completed' ? 'pending' : 'completed',
+                    completedAt:
+                      subtask.status === 'completed' ? undefined : new Date().toISOString()
+                  }
+                : subtask
+            )
           };
         }
         return task;
@@ -74,7 +73,8 @@ const ProjectsContent: React.FC = () => {
     }
   };
 
-  const getPriorityColor = (priority: string): BadgeVariant => {
+  /* ---------- PRIORITY STYLES ---------- */
+  const getPriorityBadge = (priority: string): BadgeVariant => {
     switch (priority) {
       case 'high': return 'destructive';
       case 'medium': return 'default';
@@ -83,11 +83,24 @@ const ProjectsContent: React.FC = () => {
     }
   };
 
+  const getPriorityCardStyle = (priority: string) => {
+    switch (priority) {
+      case 'high':
+        return 'border-2 border-red-500 shadow-red-200 animate-pulse bg-red-50/40';
+      case 'medium':
+        return 'border-2 border-amber-400 bg-amber-50/40';
+      case 'low':
+        return 'border-2 border-green-400 bg-green-50/40';
+      default:
+        return '';
+    }
+  };
+
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">My Projects & Tasks</h2>
 
-      {/* My Tasks */}
+      {/* ================= MY TASKS ================= */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -96,23 +109,30 @@ const ProjectsContent: React.FC = () => {
           </CardTitle>
           <CardDescription>Tasks and subtasks assigned to you</CardDescription>
         </CardHeader>
+
         <CardContent>
           {myTasks.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No tasks assigned yet</p>
           ) : (
             <div className="space-y-4">
               {myTasks.map(({ project, task }) => (
-                <Card key={task.id}>
+                <Card
+                  key={task.id}
+                  className={`transition-all hover:shadow-lg ${getPriorityCardStyle(task.priority)}`}
+                >
                   <CardHeader>
                     <div className="flex justify-between items-start">
                       <div>
                         <CardTitle className="text-base">{task.title}</CardTitle>
                         <CardDescription>{task.description}</CardDescription>
-                        <p className="text-xs text-muted-foreground mt-1">Project: {project.title}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Project: {project.title}
+                        </p>
                       </div>
+
                       <div className="flex flex-col items-end space-y-1">
-                        <Badge variant={getPriorityColor(task.priority)}>
-                          {task.priority}
+                        <Badge variant={getPriorityBadge(task.priority)}>
+                          {task.priority.toUpperCase()}
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           Due: {new Date(task.dueDate).toLocaleDateString()}
@@ -120,35 +140,56 @@ const ProjectsContent: React.FC = () => {
                       </div>
                     </div>
                   </CardHeader>
-                  {task.subtasks && task.subtasks.length > 0 && (
+
+                  {task.subtasks?.length > 0 && (
                     <CardContent>
                       <div className="space-y-2">
-                        <div className="flex justify-between items-center mb-2">
+                        <div className="flex justify-between items-center">
                           <p className="text-sm font-medium">Subtasks</p>
                           <p className="text-xs text-muted-foreground">
-                            {task.subtasks.filter((st: Subtask) => st.status === 'completed').length}/{task.subtasks.length} completed
+                            {task.subtasks.filter(st => st.status === 'completed').length}/
+                            {task.subtasks.length} completed
                           </p>
                         </div>
-                        <Progress 
-                          value={(task.subtasks.filter((st: Subtask) => st.status === 'completed').length / task.subtasks.length) * 100} 
-                          className="h-2 mb-3"
+
+                        <Progress
+                          value={
+                            (task.subtasks.filter(st => st.status === 'completed').length /
+                              task.subtasks.length) *
+                            100
+                          }
+                          className="h-2"
                         />
-                        {task.subtasks.map((subtask: Subtask) => (
-                          <div key={subtask.id} className="flex items-start space-x-3 p-3 border rounded-lg hover:bg-gray-50 transition-colors">
+
+                        {task.subtasks.map((subtask) => (
+                          <div
+                            key={subtask.id}
+                            className="flex space-x-3 p-3 border rounded-lg bg-white hover:bg-gray-50 transition"
+                          >
                             <input
                               type="checkbox"
                               checked={subtask.status === 'completed'}
-                              onChange={() => handleToggleSubtask(project.id, task.id, subtask.id)}
-                              className="mt-1 h-4 w-4 cursor-pointer"
+                              onChange={() =>
+                                handleToggleSubtask(project.id, task.id, subtask.id)
+                              }
+                              className="mt-1 h-4 w-4"
                             />
-                            <div className="flex-1">
-                              <h4 className={`font-medium ${subtask.status === 'completed' ? 'line-through text-muted-foreground' : ''}`}>
+                            <div>
+                              <h4
+                                className={`font-medium ${
+                                  subtask.status === 'completed'
+                                    ? 'line-through text-muted-foreground'
+                                    : ''
+                                }`}
+                              >
                                 {subtask.title}
                               </h4>
-                              <p className="text-sm text-muted-foreground">{subtask.description}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {subtask.description}
+                              </p>
                               {subtask.completedAt && (
                                 <p className="text-xs text-green-600 mt-1">
-                                  ✓ Completed: {new Date(subtask.completedAt).toLocaleString()}
+                                  ✓ Completed {new Date(subtask.completedAt).toLocaleString()}
                                 </p>
                               )}
                             </div>
@@ -164,7 +205,7 @@ const ProjectsContent: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* All Projects */}
+      {/* ================= ALL PROJECTS ================= */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -173,69 +214,57 @@ const ProjectsContent: React.FC = () => {
           </CardTitle>
           <CardDescription>View all company projects</CardDescription>
         </CardHeader>
+
         <CardContent>
-          {projects.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No projects available</p>
-          ) : (
-            <div className="space-y-4">
-              {projects.map((project) => (
-                <Card key={project.id}>
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
+          <div className="space-y-4">
+            {projects.map((project) => (
+              <Card
+                key={project.id}
+                className={`transition-all hover:shadow-lg ${getPriorityCardStyle(
+                  project.priority
+                )}`}
+              >
+                <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-lg">{project.title}</CardTitle>
+                      <CardDescription className="mt-2">
+                        {project.description}
+                      </CardDescription>
+                    </div>
+
+                    <div className="flex flex-col items-end space-y-1">
+                      <Badge variant={getPriorityBadge(project.priority)}>
+                        {project.priority.toUpperCase()}
+                      </Badge>
+                      <Badge variant="outline">{project.status}</Badge>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    {project.startDate && (
                       <div>
-                        <CardTitle className="text-lg">{project.title}</CardTitle>
-                        <CardDescription className="mt-2">{project.description}</CardDescription>
-                      </div>
-                      <div className="flex flex-col items-end space-y-1">
-                        <Badge variant={getPriorityColor(project.priority)}>
-                          {project.priority}
-                        </Badge>
-                        <Badge variant="outline">
-                          {project.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      {project.startDate && (
-                        <div>
-                          <p className="text-muted-foreground">Start Date</p>
-                          <p className="font-medium">{new Date(project.startDate).toLocaleDateString()}</p>
-                        </div>
-                      )}
-                      {project.endDate && (
-                        <div>
-                          <p className="text-muted-foreground">End Date</p>
-                          <p className="font-medium">{new Date(project.endDate).toLocaleDateString()}</p>
-                        </div>
-                      )}
-                    </div>
-                    {project.tasks && project.tasks.length > 0 && (
-                      <div className="mt-4 pt-4 border-t">
-                        <p className="text-sm font-medium mb-2">Tasks: {project.tasks.length}</p>
-                        <div className="space-y-2">
-                          {project.tasks.slice(0, 3).map((task: Task) => (
-                            <div key={task.id} className="text-sm p-2 bg-gray-50 rounded">
-                              <p className="font-medium">{task.title}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Assigned to: {task.assignedTo === user?.id ? 'You' : 'Other'}
-                              </p>
-                            </div>
-                          ))}
-                          {project.tasks.length > 3 && (
-                            <p className="text-xs text-muted-foreground">
-                              +{project.tasks.length - 3} more tasks
-                            </p>
-                          )}
-                        </div>
+                        <p className="text-muted-foreground">Start Date</p>
+                        <p className="font-medium">
+                          {new Date(project.startDate).toLocaleDateString()}
+                        </p>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                    {project.endDate && (
+                      <div>
+                        <p className="text-muted-foreground">End Date</p>
+                        <p className="font-medium">
+                          {new Date(project.endDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>
